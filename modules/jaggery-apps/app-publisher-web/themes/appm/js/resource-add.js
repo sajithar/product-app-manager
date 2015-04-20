@@ -1,72 +1,71 @@
-var tiers ={}; //contains Throttling tier details
+var tiers = {}; //contains Throttling tier details
 
 var throttlingTierControlBlock; //html formatted block for throttling tiers list
 
 var RESOURCES = [
-    {"url_pattern":"/*", "http_verb":"GET" ,  "throttling_tier":"", "user_roles":"" },
-    {"url_pattern":"/*", "http_verb":"POST"  , "throttling_tier":"", "user_roles":"" },
-    {"url_pattern":"/*", "http_verb":"PUT" ,  "throttling_tier":"", "user_roles":"" },
-    {"url_pattern":"/*", "http_verb":"DELETE" , "throttling_tier":"", "user_roles":"" },
-    {"url_pattern":"/*", "http_verb":"OPTIONS" , "throttling_tier":"", "user_roles":"" },
+    {"url_pattern": "/*", "http_verb": "GET", "throttling_tier": "", "user_roles": "" },
+    {"url_pattern": "/*", "http_verb": "POST", "throttling_tier": "", "user_roles": "" },
+    {"url_pattern": "/*", "http_verb": "PUT", "throttling_tier": "", "user_roles": "" },
+    {"url_pattern": "/*", "http_verb": "DELETE", "throttling_tier": "", "user_roles": "" },
+    {"url_pattern": "/*", "http_verb": "OPTIONS", "throttling_tier": "", "user_roles": "" },
 ];
 
 
-$( document ).ready(function() {
+$(document).ready(function () {
 
 
-    $("#overview_context").attr('maxlength','200');
+    $("#overview_context").attr('maxlength', '200');
 
     //get Tier details from tier.xml
     $.ajax({
-        url: '/publisher/api/entitlement/get/Tiers',
-        type: 'GET',
-        contentType: 'application/json',
-        dataType: 'json',
-        async: false,
-        success: function (data) {
-            tiers = data;
-            throttlingTierControlBlock = drawThrottlingTiersDynamically();
-        },
-        error: function () {
-        }
-    });
+               url: '/publisher/api/entitlement/get/Tiers',
+               type: 'GET',
+               contentType: 'application/json',
+               dataType: 'json',
+               async: false,
+               success: function (data) {
+                   tiers = data;
+                   throttlingTierControlBlock = drawThrottlingTiersDynamically();
+               },
+               error: function () {
+               }
+           });
 
     //load throttling tiers
     $("#throttlingTier").empty().append(throttlingTierControlBlock);
 
     //fixed chrome issue with file paths
-    $('input[type=file]').on('change', function(e) {
+    $('input[type=file]').on('change', function (e) {
         var filename = $(e.currentTarget).val().replace(/^.*\\/, "");
         $(this).parent().parent().find('.txt-filepath').val(filename);
     });
 
     // get the Shared entitlement partials
     $.ajax({
-        url: '/publisher/api/entitlement/get/shared/policy/partial/list',
-        type: 'GET',
-        contentType: 'application/json',
-        dataType: 'json',
-        success: function (data) {
+               url: '/publisher/api/entitlement/get/shared/policy/partial/list',
+               type: 'GET',
+               contentType: 'application/json',
+               dataType: 'json',
+               success: function (data) {
 
-            for (var i = 0; i < data.length; i++) {
-                policyPartialsArray.push({
-                    id: data[i].partialId,
-                    policyPartialName: data[i].partialName,
-                    policyPartial: data[i].partialContent,
-                    isShared: data[i].isShared,
-                    author: data[i].author
-                })
-            }
-            updatePolicyPartial();
+                   for (var i = 0; i < data.length; i++) {
+                       policyPartialsArray.push({
+                                                    id: data[i].partialId,
+                                                    policyPartialName: data[i].partialName,
+                                                    policyPartial: data[i].partialContent,
+                                                    isShared: data[i].isShared,
+                                                    author: data[i].author
+                                                })
+                   }
+                   updatePolicyPartial();
 
-        },
-        error: function () {
-        }
-    });
+               },
+               error: function () {
+               }
+           });
 
     //load all available global (applicaiton level) java policy list from DB
     loadAvailableJavaPolicies(null, true);
-
 
 
     $("#add_resource").click(function () {
@@ -74,7 +73,7 @@ $( document ).ready(function() {
         $(".http_verb").each(function () {
             var resource = {};
             var url_pattern = $("#url_pattern").val();
-            resource.url_pattern =  url_pattern.indexOf('/') == 0 ? url_pattern : '/' + url_pattern;
+            resource.url_pattern = url_pattern.indexOf('/') == 0 ? url_pattern : '/' + url_pattern;
             resource.http_verb = $(this).val();
             resource.user_roles = $("#user_roles").val();
             if ($(this).is(':checked')) {
@@ -92,11 +91,11 @@ $( document ).ready(function() {
     /**
      * this will collect trasport radio values and pushinto hidden input filed
      */
-    $(".trans_checkbox").click(function(){
+    $(".trans_checkbox").click(function () {
         var output = [];
-        $( ".trans_checkbox" ).each(function( index ) {
+        $(".trans_checkbox").each(function (index) {
             var value = $(this).data('value');
-            if( $(this).is(':checked')){
+            if ($(this).is(':checked')) {
                 output.push(value);
             }
         });
@@ -108,11 +107,11 @@ $( document ).ready(function() {
     /**
      * This enable/disable role based authorization adhere with anonymous access property value
      */
-    $('#anonymousAccessToUrlPattern').change(function(){
+    $('#anonymousAccessToUrlPattern').change(function () {
         var selectedVal = $('#anonymousAccessToUrlPattern').val();
-        if(selectedVal == "true"){
+        if (selectedVal == "true") {
             $('.authPolicies').hide(200);
-        }else{
+        } else {
             $('.authPolicies').show(200);
         }
     });
@@ -134,12 +133,11 @@ $( document ).ready(function() {
     });
 
 
-
-    $("#clear_resource").click(function(){
+    $("#clear_resource").click(function () {
         resetResource();
     });
 
-    $("#resource_tbody").delegate(".delete_resource","click", function(){
+    $("#resource_tbody").delegate(".delete_resource", "click", function () {
 
 
         var conf = confirm("Are you sure you want to delete the selected resource?");
@@ -162,8 +160,8 @@ $( document ).ready(function() {
         $("#resource_tbody").html("");
         for (var i = 0; i < RESOURCES.length; i++) {
             $("#resource_tbody").prepend(
-                "<tr> \
-                  <td><span style='color:#999'>/{context}/{version}</span>" + RESOURCES[i].url_pattern + " <input type='hidden' value='" + RESOURCES[i].url_pattern + "' name='uritemplate_urlPattern" + i + "'/></td> \
+                            "<tr> \
+                              <td><span style='color:#999'>/{context}/{version}</span>" + RESOURCES[i].url_pattern + " <input type='hidden' value='" + RESOURCES[i].url_pattern + "' name='uritemplate_urlPattern" + i + "'/></td> \
                   <td><strong>" + RESOURCES[i].http_verb + "</strong><input type='hidden' value='" + RESOURCES[i].http_verb + "' name='uritemplate_httpVerb" + i + "'/></td> \
                     <td style='padding:0px'><select name='uritemplate_policyGroupId" + i + "' id='uritemplate_policyGroupId" + i + "' onChange='updateDropdownPolicyGroup(" + i + ");'   class='policy_groups form-control'>" + policyGroupBlock + "</select></td>\
                      <td> \
@@ -187,26 +185,64 @@ $( document ).ready(function() {
 
     //handle global policies checkbox logic
     $(document).on("click", '.controll_visibility', function () {
-        if($(this).context.checked){
+        if ($(this).context.checked) {
             $('#token-input-roles').show();
-            $('.global_role>ul.token-input-list-facebook').css('border','1px solid #ccc');
-        }else{
+            $('.global_role>ul.token-input-list-facebook').css('border', '1px solid #ccc');
+        } else {
             $('#token-input-roles').hide();
             $('#roles').tokenInput("clear");
-            $('.global_role>ul.token-input-list-facebook').css('border','none');
+            $('.global_role>ul.token-input-list-facebook').css('border', 'none');
         }
     });
 
     $(document).on("click", '.controll_overview_logoutUrl', function () {
         $(this).context.checked ? $('#overview_logoutUrl').show() : $('#overview_logoutUrl').hide();
-    })
+    });
     //set default on loading
     $('#token-input-roles').hide();
     $('#overview_logoutUrl').hide();
-    $('.global_role>ul.token-input-list-facebook').css('border','none');
+    $('.global_role>ul.token-input-list-facebook').css('border', 'none');
 
     savePolicyGroupData();
     //forced commit by team
+
+    // outbound provisioning
+    $(document).on("click", '#overview_skipGateway', function () {
+        if ($(this).context.checked) {
+            var dropdown = $('#overview_obProvisioningConnector');
+            if (dropdown.find('option').length <= 0) {
+                $.ajax({
+                           url: '/publisher/api/provisioning/connector/names',
+                           type: 'GET',
+                           contentType: 'application/json',
+                           success: function (response) {
+                               var connectorNames = JSON.parse(response);
+                               for (var i = 0; i < connectorNames.length; i++) {
+                                   var x = connectorNames[i];
+                                   dropdown.append($("<option></option>").val(x).text(x));
+                               }
+                           },
+                           error: function (response) {
+                               showAlert(SP_ERROR_MEESAGE, 'error');
+                           }
+                       });
+            }
+            $('#overview_obProvisioningUserRoles').tokenInput('clear');
+            $('#obProvisioningConnectorDiv').show();
+        } else {
+            $('#obProvisioningConnectorDiv').hide();
+        }
+    });
+    // set default on loading
+    $('#obProvisioningConnectorDiv').hide();
+    // initialize tokeninput of provisioning user roles
+    $('#overview_obProvisioningUserRoles').tokenInput('/publisher/api/lifecycle/information/meta/' + $('#meta-asset-type').val() + '/roles', {
+    	theme: 'facebook',
+    	preventDuplicates: true,
+    	hintText: "Type in a user role"
+	});
+    $("#obProvisioningConnectorDiv .token-input-list-facebook").attr("style","width: 50%;");
+
 });
 
 function resetResource() {
@@ -230,11 +266,11 @@ function updateDropdownPolicyGroup(index) {
  * set policy group id value
  */
 function setPolicyGroupValue() {
-         for (var i = 0; i < RESOURCES.length; i++) {
-            if (RESOURCES[i].policyGroupId !== undefined && RESOURCES[i].policyGroupId !== '') {
-                $('#uritemplate_policyGroupId' + i).val(RESOURCES[i].policyGroupId);
-            }
+    for (var i = 0; i < RESOURCES.length; i++) {
+        if (RESOURCES[i].policyGroupId !== undefined && RESOURCES[i].policyGroupId !== '') {
+            $('#uritemplate_policyGroupId' + i).val(RESOURCES[i].policyGroupId);
         }
+    }
 }
 
 
