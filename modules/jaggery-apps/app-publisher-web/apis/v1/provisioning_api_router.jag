@@ -1,0 +1,54 @@
+<%
+
+include("/extensions/webapp/modules/jagg/jagg.jag");
+require('/modules/publisher.js').exec(function (ctx) {
+
+    var config = require('/config/publisher.json');
+    var caramel = require('caramel');
+
+    var router = require('/modules/router-g.js').router();
+    var routeManager = new router.Router();
+
+    var log = new Log();
+
+    routeManager.register('GET', 'publisher', '/publisher/api/provisioning/connector/names', function (context) {
+
+        var obpManager = new Packages.org.wso2.carbon.appmgt.impl.provisioning.OutboundProvisioningManager();
+        var connectors = obpManager.getAllRegisteredConnectors();
+        var rv = [];
+        for (var i = 0; i < connectors.size(); i++) {
+            rv.push(connectors.get(i));
+        }
+        print(rv);
+    });
+    
+	routeManager.register('POST', 'publisher', '/publisher/api/provision/{connector_name}', function (context) {
+		
+		var connectorName = context.params.connector_name;
+		var userRoles = context.post['user_roles'];
+		
+		var obpManager = new Packages.org.wso2.carbon.appmgt.impl.provisioning.OutboundProvisioningManager();
+		var connectors = obpManager.getAllRegisteredConnectors();
+		var rv = [];
+		for (var i = 0; i < connectors.size(); i++) {
+			rv.push(connectors.get(i));
+		}
+		print(rv);
+	});
+
+    var securityModule = require('/modules/security/security.manager.js').securityManagementModule();
+    var sm = securityModule.cached();
+
+    //This will short circuit the handling of the requests
+    var passed = sm.check(session, function () {
+        response.sendError(401);
+    });
+
+    //Stop servicing the request if the check failed
+    if (passed) {
+        routeManager.handle(request, response);
+    }
+
+}, request, response, session);
+
+%>
