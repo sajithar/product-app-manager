@@ -1,32 +1,19 @@
 <%
 
 include("/extensions/webapp/modules/jagg/jagg.jag");
+
 require('/modules/publisher.js').exec(function (ctx) {
 
-    var config = require('/config/publisher.json');
-    var caramel = require('caramel');
+	var config = require('/config/publisher.json'); // TODO remove unwanted dependancies
+	var caramel = require('caramel');
+	var carbon = require('carbon');
+	var store = require('store');
+	var router = require('/modules/router-g.js').router();
 
-    var router = require('/modules/router-g.js').router();
-    var routeManager = new router.Router();
+	var routeManager = new router.Router();
+	var log = new Log();
 
-    var log = new Log();
-
-    routeManager.register('GET', 'publisher', '/publisher/api/provisioning/connector/names', function (context) {
-
-        var obpManager = new Packages.org.wso2.carbon.appmgt.impl.provisioning.OutboundProvisioningManager();
-        var connectors = obpManager.getAllRegisteredConnectors();
-        var rv = [];
-        for (var i = 0; i < connectors.size(); i++) {
-            rv.push(connectors.get(i));
-        }
-        print(rv);
-    });
-    
-	routeManager.register('POST', 'publisher', '/publisher/api/provision/{connector_name}', function (context) {
-		
-		var connectorName = context.params.connector_name;
-		var userRoles = context.post['user_roles'];
-		
+	routeManager.register('GET', 'publisher', '/publisher/api/provisioning/connectors', function (context) {
 		var obpManager = new Packages.org.wso2.carbon.appmgt.impl.provisioning.OutboundProvisioningManager();
 		var connectors = obpManager.getAllRegisteredConnectors();
 		var rv = [];
@@ -36,18 +23,75 @@ require('/modules/publisher.js').exec(function (ctx) {
 		print(rv);
 	});
 
-    var securityModule = require('/modules/security/security.manager.js').securityManagementModule();
-    var sm = securityModule.cached();
+	routeManager.register('GET', 'publisher', '/publisher/api/provisioning/usernames/{role}', function (context) {
+		var userNames = getUserStoreManagerOfTenant(null).getUserListOfRole(context.params.role);
+		print(userNames);
+	});
 
-    //This will short circuit the handling of the requests
-    var passed = sm.check(session, function () {
-        response.sendError(401);
-    });
+	routeManager.register('GET', 'publisher', '/publisher/api/provisioning/claims/{username}/{dialect}', function (context) {
+		var tenantId = getUserTenantId(context.params.username);
+		var claimManager = getClaimManagerOfTenant(tenantId);
+		var claimMappings = claimManager.getAllClaimMappings(context.params.dialect);
 
-    //Stop servicing the request if the check failed
-    if (passed) {
-        routeManager.handle(request, response);
-    }
+		var jsonOutput = [];
+		for (var i = 0; i < claimMappings.length; i++) {
+			var claim = claimMappings[i].getClaim();
+			var tmp = {
+				claimUri: claim.getClaimUri(),
+				value: claim.getValue(),
+			};
+			jsonOutput.push(claim);
+		}
+		print(jsonOutput);
+	});
+
+	routeManager.register('GET', 'publisher', '/publisher/api/provision', function (context) {
+		var connectorName = request.getParameter("connector");
+		var roles = request.getParameter("roles");
+		
+		
+	});
+
+	function getUserNamesOfRole(role){
+		return getUserStoreManagerOfTenant(null).getUserListOfRole(role);
+	}
+
+	function getUserTenantId(username){
+		var usm = getUserStoreManagerOfTenant(null);
+		return usm.getTenantId(username);
+	}
+
+	function getUserStoreManagerOfTenant(tenantId){
+		var realmService = carbon.server.osgiService('org.wso2.carbon.user.core.service.RealmService');
+		if(tenantId == null){
+			tenantId = server.current(session).tenantId;
+		}
+		return realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+	}
+
+	function getClaimManagerOfTenant(tenantId){
+		var realmService = carbon.server.osgiService('org.wso2.carbon.user.core.service.RealmService');
+		if(tenantId == null){
+			tenantId = server.current(session).tenantId;
+		}
+		return realmService.getTenantUserRealm(tenantId).getClaimManager();
+	}
+
+	var securityModule = require('/modules/security/security.manager.js').securityManagementModule();
+	var sm = securityModule.cached();
+
+	//This will short circuit the handling of the requests
+	var passed = sm.check(session, function () {
+		response.sendError(401);
+	});
+
+	//Stop servicing the request if the check failed
+	if (passed) {
+		var user = store.user;
+		var server = store.server;
+
+		routeManager.handle(request, response);
+	}
 
 }, request, response, session);
 
